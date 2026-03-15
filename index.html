@@ -599,9 +599,33 @@ Use REAL and ACCURATE data for this specific company. All financials in ₹ Cror
         });
 
         const data = await response.json();
+
+        // Show real API error if request failed
+        if (!response.ok || data.error) {
+            const errMsg = data.error ? data.error.message : ('HTTP ' + response.status);
+            setStatus('API Error: ' + errMsg);
+            btn.disabled = false;
+            btn.textContent = 'Analyze ▶';
+            return;
+        }
+
+        if (!data.content || !Array.isArray(data.content)) {
+            setStatus('Unexpected response. Check console.');
+            console.error('Full response:', JSON.stringify(data));
+            btn.disabled = false;
+            btn.textContent = 'Analyze ▶';
+            return;
+        }
+
         const raw = data.content.map(i => i.text || '').join('');
-        const clean = raw.replace(/```json|```/g, '').trim();
-        const d = JSON.parse(clean);
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            setStatus('Could not parse AI response: ' + raw.substring(0, 120));
+            btn.disabled = false;
+            btn.textContent = 'Analyze ▶';
+            return;
+        }
+        const d = JSON.parse(jsonMatch[0]);
 
         setStatus('Rendering dashboard...');
         await new Promise(r => setTimeout(r, 300));
