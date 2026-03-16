@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal-X | AI Equity Research</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #060810;
+            --bg2: #0c1018;
+            --surface: rgba(15, 20, 32, 0.85);
+            --surface2: rgba(22, 30, 48, 0.6);
+            --border: rgba(0, 198, 255, 0.15);
+            --border2: rgba(255, 255, 255, 0.06);
+            --cyan: #00c6ff;
+            --green: #00e5a0;
+            --red: #ff4f6d;
+            --amber: #ffb830;
+            --white: #e8eef7;
+            --muted: #5a6a85;
+            --dim: #2a3450;
+            --font-mono: 'Space Mono', monospace;
+            --font-sans: 'Syne', sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--white);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,198,255,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 30% at 90% 80%, rgba(0,229,160,0.04) 0%, transparent 50%);
+        }
+
+        /* ── SEARCH BAR ── */
+        .search-wrapper {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 0;
+            text-align: center;
+        }
+
+        .search-eyebrow {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--cyan);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .search-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--white);
+            margin-bottom: 30px;
+            letter-spacing: -0.5px;
+        }
+
+        .search-title span { color: var(--cyan); }
+
+        .search-bar {
+            display: flex;
+            gap: 12px;
+            max-width: 600px;
+            margin: 0 auto 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--white);
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            padding: 14px 18px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input::placeholder { color: var(--muted); }
+        .search-input:focus { border-color: var(--cyan); }
+
+        .search-btn {
+            background: var(--cyan);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            cursor: pointer;
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 14px 24px;
+            text-transform: uppercase;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .search-btn:hover { opacity: 0.85; }
+        .search-btn:active { transform: scale(0.97); }
+        .search-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .quick-picks {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            border-radius: 20px;
+            color: var(--muted);
+            cursor: pointer;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            padding: 5px 14px;
+            transition: all 0.2s;
+        }
+
+        .pill:hover { border-color: var(--cyan); color: var(--cyan); }
+
+        /* ── STATUS BAR ── */
+        #status-bar {
+            max-width: 900px;
+            margin: 20px auto 0;
+            padding: 0 20px;
+            display: none;
+        }
+
+        .status-text {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--cyan);
+            letter-spacing: 1px;
+            animation: blink-cursor 1s step-end infinite;
+        }
+
+        @keyframes blink-cursor {
+            50% { opacity: 0.4; }
+        }
+
+        /* ── MAIN DASHBOARD ── */
+        #dashboard {
+            max-width: 1300px;
+            margin: 30px auto;
+            padding: 0 20px 60px;
+            display: none;
+        }
+
+        /* ── HEADER ── */
+        .dash-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 28px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dash-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--cyan), var(--green));
+        }
+
+        .ticker-block .ticker {
+            font-family: var(--font-mono);
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--cyan);
+        }
+
+        .ticker-block .company-name {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 3px;
+        }
+
+        .price-block { text-align: right; }
+        .price-block .price {
+            font-family: var(--font-mono);
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 12px;
+        }
+
+        .badge-buy { background: rgba(0,229,160,0.12); color: var(--green); border: 1px solid rgba(0,229,160,0.3); }
+        .badge-hold { background: rgba(255,184,48,0.12); color: var(--amber); border: 1px solid rgba(255,184,48,0.3); }
+        .badge-sell { background: rgba(255,79,109,0.12); color: var(--red); border: 1px solid rgba(255,79,109,0.3); }
+        .badge-accumulate { background: rgba(0,198,255,0.12); color: var(--cyan); border: 1px solid rgba(0,198,255,0.3); }
+
+        /* ── GRID ── */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+        }
+
+        .col-4 { grid-column: span 4; }
+        .col-5 { grid-column: span 5; }
+        .col-6 { grid-column: span 6; }
+        .col-7 { grid-column: span 7; }
+        .col-8 { grid-column: span 8; }
+        .col-12 { grid-column: span 12; }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 10px;
+            padding: 20px;
+            transition: border-color 0.25s;
+        }
+
+        .card:hover { border-color: rgba(0,198,255,0.25); }
+
+        .card-label {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--muted);
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border2);
+        }
+
+        /* ── METRIC GRID ── */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .metric { padding: 10px; background: var(--surface2); border-radius: 6px; }
+        .metric-val { font-family: var(--font-mono); font-size: 1.4rem; font-weight: 700; color: var(--white); }
+        .metric-val.up { color: var(--green); }
+        .metric-val.down { color: var(--red); }
+        .metric-key { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+        /* ── TABLE ── */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .data-table th {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--cyan);
+            letter-spacing: 1px;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            text-align: right;
+        }
+        .data-table th:first-child { text-align: left; }
+        .data-table td { padding: 10px; border-bottom: 1px solid var(--border2); text-align: right; color: #b0bcd4; }
+        .data-table td:first-child { text-align: left; color: var(--white); font-weight: 600; }
+        .data-table tr:last-child td { border-bottom: none; }
+
+        /* ── RISK ITEMS ── */
+        .risk-list { display: flex; flex-direction: column; gap: 8px; }
+        .risk-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--surface2);
+            border-radius: 6px;
+            font-size: 0.82rem;
+        }
+
+        .sev { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+        .sev-H { background: rgba(255,79,109,0.15); color: var(--red); }
+        .sev-M { background: rgba(255,184,48,0.15); color: var(--amber); }
+        .sev-L { background: rgba(0,229,160,0.15); color: var(--green); }
+
+        /* ── THESIS ── */
+        .thesis-text {
+            font-size: 0.9rem;
+            line-height: 1.75;
+            color: #b8c8e0;
+        }
+
+        .thesis-text strong { color: var(--white); }
+
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+        .tag {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        /* ── CANVAS ── */
+        canvas { max-height: 240px; }
+
+        /* ── LOADING SKELETON ── */
+        .skeleton {
+            background: linear-gradient(90deg, var(--surface2) 25%, rgba(255,255,255,0.04) 50%, var(--surface2) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+        @media (max-width: 1024px) {
+            .col-4, .col-5, .col-6, .col-7, .col-8 { grid-column: span 12; }
+        }
+
+        @media (max-width: 640px) {
+            .search-title { font-size: 1.4rem; }
+            .metrics { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ── SEGMENT SCORE ── */
+        .score-bar-wrap { margin-top: 6px; }
+        .score-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+        .score-bar { height: 4px; background: var(--dim); border-radius: 2px; overflow: hidden; }
+        .score-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+        .score-fill.cyan { background: var(--cyan); }
+        .score-fill.green { background: var(--green); }
+        .score-fill.amber { background: var(--amber); }
+        .score-fill.red { background: var(--red); }
+
+        .ai-stamp {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            color: var(--muted);
+            margin-top: 16px;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- SEARCH UI -->
+<div class="search-wrapper">
+    <div class="search-eyebrow">Terminal-X · AI Equity Research</div>
+    <h1 class="search-title">Research any <span>Indian stock</span> instantly</h1>
+    <div class="search-bar">
+        <input
+            class="search-input"
+            id="stockInput"
+            placeholder="e.g. GESHIP, TITAN, HDFC Bank, Eicher Motors..."
+            autocomplete="off"
+        />
+        <button class="search-btn" id="analyzeBtn" onclick="analyzeStock()">Analyze ▶</button>
+    </div>
+    <!-- API KEY INPUT -->
+    <div style="max-width:600px;margin:0 auto 18px;background:rgba(15,20,32,0.9);border:1px solid rgba(255,184,48,0.25);border-radius:10px;padding:14px 18px;">
+        <div style="font-family:'Space Mono',monospace;font-size:0.65rem;color:#ffb830;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">🔑 Google Gemini API Key (FREE)</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+            <input
+                id="apiKeyInput"
+                type="password"
+                placeholder="AIza..."
+                style="flex:1;background:rgba(22,30,48,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#fff;font-family:'Space Mono',monospace;font-size:0.8rem;padding:9px 14px;outline:none;"
+            />
+            <button onclick="saveKey()" style="background:#ffb830;border:none;border-radius:6px;color:#000;cursor:pointer;font-weight:700;font-size:0.75rem;padding:9px 16px;white-space:nowrap;">Save</button>
+        </div>
+        <div style="font-size:0.7rem;color:#5a6a85;margin-top:7px;">Get FREE key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#00c6ff;">aistudio.google.com/apikey</a> · No credit card needed · Stored in browser only</div>
+        <div id="keyStatus" style="font-size:0.7rem;margin-top:5px;display:none;"></div>
+    </div>
+
+    <div class="quick-picks">
+        <span class="pill" onclick="quickPick('GESHIP')">GESHIP</span>
+        <span class="pill" onclick="quickPick('TITAN')">TITAN</span>
+        <span class="pill" onclick="quickPick('EICHERMOT')">EICHERMOT</span>
+        <span class="pill" onclick="quickPick('COALINDIA')">COALINDIA</span>
+        <span class="pill" onclick="quickPick('ONGC')">ONGC</span>
+        <span class="pill" onclick="quickPick('PIDILITIND')">PIDILITIND</span>
+    </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="status-bar">
+    <div class="status-text" id="statusText">▌ Initiating AI research engine...</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+
+    <div class="dash-header">
+        <div class="ticker-block">
+            <div class="ticker" id="hTicker">—</div>
+            <div class="company-name" id="hName">—</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;" id="hBadges"></div>
+        <div class="price-block">
+            <div class="price" id="hPrice">—</div>
+            <div style="font-size:0.75rem;color:var(--muted);margin-top:3px;" id="hPriceNote">NSE · Last Price</div>
+        </div>
+    </div>
+
+    <div class="grid" id="gridContent">
+        <!-- Populated dynamically -->
+    </div>
+
+</div>
+
+<script>
+let chartInstances = [];
+
+    // ── API KEY MANAGEMENT ──
+    function saveKey() {
+        const key = document.getElementById('apiKeyInput').value.trim();
+        if (!key.startsWith('AIza') && key.length < 20) {
+            showKeyStatus('❌ Invalid key. Must start with AIza', '#ff4f6d');
+            return;
+        }
+        localStorage.setItem('gemini_key', key);
+        showKeyStatus('✅ Key saved!', '#00e5a0');
+    }
+
+    function showKeyStatus(msg, color) {
+        const el = document.getElementById('keyStatus');
+        el.textContent = msg;
+        el.style.color = color;
+        el.style.display = 'block';
+        setTimeout(() => el.style.display = 'none', 3000);
+    }
+
+    function getKey() {
+        return localStorage.getItem('gemini_key') || document.getElementById('apiKeyInput').value.trim();
+    }
+
+    // Load saved key on page open
+    window.addEventListener('DOMContentLoaded', () => {
+        const saved = localStorage.getItem('gemini_key');
+        if (saved) {
+            document.getElementById('apiKeyInput').value = saved;
+            showKeyStatus('✅ Key loaded from storage', '#00c6ff');
+        }
+    });
+
+function quickPick(sym) {
+    document.getElementById('stockInput').value = sym;
+    analyzeStock();
+}
+
+document.getElementById('stockInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') analyzeStock();
+});
+
+function setStatus(msg) {
+    document.getElementById('statusText').textContent = '▌ ' + msg;
+}
+
+function destroyCharts() {
+    chartInstances.forEach(c => c.destroy());
+    chartInstances = [];
+}
+
+async function analyzeStock() {
+    const input = document.getElementById('stockInput').value.trim();
+    if (!input) return;
+
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = true;
+    btn.textContent = 'Analyzing...';
+
+    document.getElementById('status-bar').style.display = 'block';
+    document.getElementById('dashboard').style.display = 'none';
+    destroyCharts();
+
+    setStatus('Routing query to AI research engine...');
+
+    const prompt = `You are a professional equity analyst specializing in Indian listed companies (NSE/BSE).
+The user is researching: "${input}"
+
+Respond ONLY with a valid JSON object. No markdown, no backticks, no explanation. Just pure JSON.
+
+{
+  "ticker": "NSE ticker symbol (e.g. GESHIP)",
+  "exchange": "NSE or BSE",
+  "company": "Full company name",
+  "sector": "Sector name",
+  "price": "₹ realistic price (number only, e.g. 1459)",
+  "priceChange": "+2.4%",
+  "marketCap": "e.g. ₹22,400 Cr",
+  "recommendation": "BUY or ACCUMULATE or HOLD or REDUCE or SELL",
+  "target12m": "₹ price target",
+  "upside": "e.g. +18%",
+  "valuation": {
+    "pe": "e.g. 9.2x",
+    "pb": "e.g. 1.3x",
+    "ev_ebitda": "e.g. 6.5x",
+    "div_yield": "e.g. 2.1%",
+    "roe": "e.g. 21%",
+    "debt_equity": "e.g. 0.12"
+  },
+  "financials": [
+    { "year": "FY21", "revenue": 3313, "pat": 919, "ebitda_margin": 43.6, "roe": 12.1 },
+    { "year": "FY22", "revenue": 3490, "pat": 630, "ebitda_margin": 42.5, "roe": 7.9 },
+    { "year": "FY23", "revenue": 5255, "pat": 2575, "ebitda_margin": 59.2, "roe": 26.8 },
+    { "year": "FY24", "revenue": 5200, "pat": 2614, "ebitda_margin": 58.0, "roe": 23.4 },
+    { "year": "FY25", "revenue": 5395, "pat": 2820, "ebitda_margin": 59.7, "roe": 21.6 }
+  ],
+  "financialTrend": ["IMPROVING","STABLE","IMPROVING","PLATEAUING"],
+  "moat": {
+    "scale": 7,
+    "regulatory_moat": 5,
+    "pricing_power": 6,
+    "brand": 8,
+    "switching_costs": 7,
+    "network_effects": 3
+  },
+  "shareholding": {
+    "promoters": 30,
+    "fii": 25,
+    "dii": 16,
+    "public": 29
+  },
+  "risks": [
+    { "name": "Risk description 1", "severity": "H" },
+    { "name": "Risk description 2", "severity": "H" },
+    { "name": "Risk description 3", "severity": "M" },
+    { "name": "Risk description 4", "severity": "M" },
+    { "name": "Risk description 5", "severity": "L" }
+  ],
+  "thesis": "2-3 sentence investment thesis using <strong> tags for key phrases. Be specific to this company's actual business and competitive position.",
+  "catalysts": ["Catalyst 1", "Catalyst 2", "Catalyst 3"],
+  "tags": [
+    { "label": "Tag 1", "color": "cyan" },
+    { "label": "Tag 2", "color": "green" },
+    { "label": "Tag 3", "color": "amber" }
+  ],
+  "quality_scores": {
+    "business_quality": 78,
+    "management": 82,
+    "valuation_score": 65,
+    "growth_visibility": 55
+  },
+  "ews": "Early warning signal text specific to this company and sector."
+}
+
+Use REAL and ACCURATE data for this specific company. All financials in ₹ Crore. Make the thesis, risks, and catalysts genuinely relevant to this company's actual situation.`;
+
+    const apiKey = getKey();
+    if (!apiKey || apiKey.length < 20) {
+        setStatus('⚠ Please enter your Anthropic API key above first.');
+        btn.disabled = false;
+        btn.textContent = 'Analyze ▶';
+        return;
+    }
+
+    try {
+        setStatus('Fetching AI research report for ' + input.toUpperCase() + '...');
+        const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-002:generateContent?key=" + apiKey;
+        const response = await fetch(geminiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
+            })
+        });
+
+        const data = await response.json();
+
+        // Show real API error
+        if (!response.ok || data.error) {
+            const errMsg = data.error ? data.error.message : ('HTTP ' + response.status);
+            setStatus('API Error: ' + errMsg);
+            btn.disabled = false;
+            btn.textContent = 'Analyze ▶';
+            return;
+        }
+
+        const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (!raw) {
+            setStatus('Empty response from Gemini. Try again.');
+            btn.disabled = false;
+            btn.textContent = 'Analyze ▶';
+            return;
+        }
+
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            setStatus('Could not parse AI response: ' + raw.substring(0, 120));
+            btn.disabled = false;
+            btn.textContent = 'Analyze ▶';
+            return;
+        }
+        const d = JSON.parse(jsonMatch[0]);
+
+        setStatus('Rendering dashboard...');
+        await new Promise(r => setTimeout(r, 300));
+
+        renderDashboard(d);
+        document.getElementById('status-bar').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+    } catch (err) {
+        setStatus('Error: ' + err.message + ' — Please try again.');
+        console.error(err);
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Analyze ▶';
+}
+
+function renderDashboard(d) {
+    // Header
+    document.getElementById('hTicker').textContent = d.ticker + ':' + d.exchange;
+    document.getElementById('hName').textContent = d.company + ' · ' + d.sector;
+    document.getElementById('hPrice').textContent = '₹' + d.price;
+    document.getElementById('hPrice').style.color = d.priceChange.startsWith('+') ? 'var(--green)' : 'var(--red)';
+    document.getElementById('hPriceNote').textContent = d.exchange + ' · ' + d.priceChange;
+
+    const badgeClass = {
+        'BUY': 'badge-buy', 'ACCUMULATE': 'badge-accumulate',
+        'HOLD': 'badge-hold', 'REDUCE': 'badge-sell', 'SELL': 'badge-sell'
+    }[d.recommendation] || 'badge-hold';
+
+    document.getElementById('hBadges').innerHTML = `
+        <span class="badge ${badgeClass}">${d.recommendation}</span>
+        <span class="badge" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;">
+            Target ${d.target12m} <span style="color:var(--green);margin-left:4px;">${d.upside}</span>
+        </span>
+    `;
+
+    const grid = document.getElementById('gridContent');
+    grid.innerHTML = `
+        <!-- ROW 1: Valuation + Revenue Chart -->
+        <div class="card col-4">
+            <div class="card-label">Valuation Snapshot</div>
+            <div class="metrics">
+                <div class="metric"><div class="metric-val">${d.valuation.pe}</div><div class="metric-key">P/E Ratio</div></div>
+                <div class="metric"><div class="metric-val">${d.valuation.pb}</div><div class="metric-key">P/B Ratio</div></div>
+                <div class="metric"><div class="metric-val up">${d.valuation.div_yield}</div><div class="metric-key">Div Yield</div></div>
+                <div class="metric"><div class="metric-val">${d.valuation.debt_equity}</div><div class="metric-key">D/E Ratio</div></div>
+                <div class="metric"><div class="metric-val">${d.valuation.roe}</div><div class="metric-key">ROE</div></div>
+                <div class="metric"><div class="metric-val">${d.valuation.ev_ebitda}</div><div class="metric-key">EV/EBITDA</div></div>
+            </div>
+            <div style="margin-top:16px;font-size:0.75rem;color:var(--muted);">Mkt Cap: <strong style="color:var(--white);">${d.marketCap}</strong></div>
+        </div>
+
+        <div class="card col-8">
+            <div class="card-label">Revenue & PAT Trend (5-Year)</div>
+            <canvas id="finChart"></canvas>
+        </div>
+
+        <!-- ROW 2: Moat + Risk + Shareholding -->
+        <div class="card col-5">
+            <div class="card-label">Economic Moat Analysis</div>
+            <canvas id="moatChart"></canvas>
+        </div>
+
+        <div class="card col-4">
+            <div class="card-label">Risk Hierarchy</div>
+            <div class="risk-list">
+                ${d.risks.map(r => `
+                    <div class="risk-row">
+                        <span>${r.name}</span>
+                        <span class="sev sev-${r.severity}">${r.severity === 'H' ? 'HIGH' : r.severity === 'M' ? 'MED' : 'LOW'}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <div style="margin-top:12px;font-size:0.72rem;color:var(--muted);">⚡ ${d.ews}</div>
+        </div>
+
+        <div class="card col-3">
+            <div class="card-label">Shareholding</div>
+            <canvas id="shareChart"></canvas>
+        </div>
+
+        <!-- ROW 3: Financial Table -->
+        <div class="card col-12">
+            <div class="card-label">Financial Performance Matrix (₹ Crore)</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        ${d.financials.map(f => `<th>${f.year}</th>`).join('')}
+                        <th>Trend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Revenue</td>
+                        ${d.financials.map(f => `<td>₹${f.revenue.toLocaleString('en-IN')}</td>`).join('')}
+                        <td style="color:var(--green);">↗ ${d.financialTrend[0]}</td>
+                    </tr>
+                    <tr>
+                        <td>EBITDA Margin</td>
+                        ${d.financials.map(f => `<td>${f.ebitda_margin}%</td>`).join('')}
+                        <td style="color:var(--green);">● ${d.financialTrend[1]}</td>
+                    </tr>
+                    <tr>
+                        <td>Net Profit</td>
+                        ${d.financials.map(f => `<td>₹${f.pat.toLocaleString('en-IN')}</td>`).join('')}
+                        <td style="color:var(--green);">↗ ${d.financialTrend[2]}</td>
+                    </tr>
+                    <tr>
+                        <td>ROE</td>
+                        ${d.financials.map(f => `<td>${f.roe}%</td>`).join('')}
+                        <td style="color:var(--amber);">↘ ${d.financialTrend[3]}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ROW 4: Thesis + Quality Scores -->
+        <div class="card col-7">
+            <div class="card-label">Investment Thesis</div>
+            <p class="thesis-text">${d.thesis}</p>
+            <div style="margin-top:16px;">
+                <div class="card-label" style="margin-bottom:8px;">Key Catalysts</div>
+                ${d.catalysts.map((c, i) => `<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;font-size:0.82rem;color:#b0bcd4;"><span style="color:var(--cyan);font-family:var(--font-mono);">${String(i+1).padStart(2,'0')}</span>${c}</div>`).join('')}
+            </div>
+            <div class="tags">
+                ${d.tags.map(t => `<span class="tag" style="background:rgba(0,0,0,0.3);border:1px solid var(--${t.color === 'cyan' ? 'cyan' : t.color === 'green' ? 'green' : t.color === 'red' ? 'red' : 'amber'});color:var(--${t.color === 'cyan' ? 'cyan' : t.color === 'green' ? 'green' : t.color === 'red' ? 'red' : 'amber'});">${t.label}</span>`).join('')}
+            </div>
+        </div>
+
+        <div class="card col-5">
+            <div class="card-label">Quality Scorecard</div>
+            ${Object.entries(d.quality_scores).map(([k, v]) => {
+                const label = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                const color = v >= 75 ? 'green' : v >= 55 ? 'cyan' : v >= 40 ? 'amber' : 'red';
+                return `
+                    <div class="score-bar-wrap" style="margin-bottom:14px;">
+                        <div class="score-label"><span>${label}</span><span style="color:var(--white);font-family:var(--font-mono);">${v}/100</span></div>
+                        <div class="score-bar"><div class="score-fill ${color}" style="width:${v}%"></div></div>
+                    </div>
+                `;
+            }).join('')}
+            <div class="ai-stamp">⊛ AI-GENERATED RESEARCH · NOT FINANCIAL ADVICE · VERIFY BEFORE TRADING</div>
+        </div>
+    `;
+
+    // ── Build Charts after DOM is ready
+    requestAnimationFrame(() => {
+        // Financial Chart
+        const finCtx = document.getElementById('finChart').getContext('2d');
+        chartInstances.push(new Chart(finCtx, {
+            type: 'line',
+            data: {
+                labels: d.financials.map(f => f.year),
+                datasets: [{
+                    label: 'Revenue (₹ Cr)',
+                    data: d.financials.map(f => f.revenue),
+                    borderColor: '#00c6ff',
+                    backgroundColor: 'rgba(0,198,255,0.08)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#00c6ff'
+                }, {
+                    label: 'PAT (₹ Cr)',
+                    data: d.financials.map(f => f.pat),
+                    borderColor: '#00e5a0',
+                    backgroundColor: 'transparent',
+                    borderDash: [5, 5],
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#00e5a0'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { color: '#8892b0', font: { family: 'Space Mono', size: 10 } } } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a6a85', font: { family: 'Space Mono', size: 10 } } },
+                    x: { grid: { display: false }, ticks: { color: '#5a6a85', font: { family: 'Space Mono', size: 10 } } }
+                }
+            }
+        }));
+
+        // Moat Radar
+        const moatCtx = document.getElementById('moatChart').getContext('2d');
+        chartInstances.push(new Chart(moatCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Scale', 'Regulatory', 'Pricing Power', 'Brand', 'Switching Costs', 'Network Effects'],
+                datasets: [{
+                    label: 'Moat Score',
+                    data: [d.moat.scale, d.moat.regulatory_moat, d.moat.pricing_power, d.moat.brand, d.moat.switching_costs, d.moat.network_effects],
+                    backgroundColor: 'rgba(0,198,255,0.15)',
+                    borderColor: '#00c6ff',
+                    pointBackgroundColor: '#00c6ff',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        min: 0, max: 10,
+                        angleLines: { color: 'rgba(255,255,255,0.07)' },
+                        grid: { color: 'rgba(255,255,255,0.07)' },
+                        pointLabels: { color: '#5a6a85', font: { family: 'Space Mono', size: 9 } },
+                        ticks: { display: false }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        }));
+
+        // Shareholding Doughnut
+        const shareCtx = document.getElementById('shareChart').getContext('2d');
+        chartInstances.push(new Chart(shareCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Promoters', 'FII', 'DII', 'Public'],
+                datasets: [{
+                    data: [d.shareholding.promoters, d.shareholding.fii, d.shareholding.dii, d.shareholding.public],
+                    backgroundColor: ['#00c6ff', '#00e5a0', '#ff4f6d', '#5a6a85'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '68%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#8892b0', font: { family: 'Space Mono', size: 9 }, boxWidth: 10, padding: 8 }
+                    }
+                }
+            }
+        }));
+    });
+}
+</script>
+</body>
+</html>
